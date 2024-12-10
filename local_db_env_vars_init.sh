@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 export DATABASE_DRIVER="postgres"
 export DATABASE_USERNAME="postgres"
