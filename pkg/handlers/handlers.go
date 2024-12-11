@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/articles"
+	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/comments"
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/models"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,8 @@ type ErrorResponse struct {
 	status int
 }
 
-func IdNotFoundResponse() ErrorResponse {
+// Article errors start
+func ArticleIdNotFoundResponse() ErrorResponse {
 	return ErrorResponse{err: "Invalid or no id was supplied for GetArticleById", status: http.StatusBadRequest}
 }
 
@@ -32,19 +34,35 @@ func ArticleGetAllError() ErrorResponse {
 }
 
 func ArticleBindingError() ErrorResponse {
-	return ErrorResponse{err: "An error occured while reading the request body as an article", status: http.StatusBadRequest}
+	return ErrorResponse{err: "An error occured while parsing the request body as an article", status: http.StatusBadRequest}
 }
 
 func ArticleCreationError() ErrorResponse {
 	return ErrorResponse{err: "An error occured while creating an article", status: http.StatusInternalServerError}
 }
 
+// Article errors end
+// Comment errors start
+func CommentBindingError() ErrorResponse {
+	return ErrorResponse{err: "An error occured while parsing the request body as a comment", status: http.StatusBadRequest}
+}
+
+func CommentCreationError() ErrorResponse {
+	return ErrorResponse{err: "An error occured while creating a comment", status: http.StatusInternalServerError}
+}
+
+func CommentInvalidArticleIdProvidedError() ErrorResponse {
+	return ErrorResponse{err: "Invalid article id provided for the comment", status: http.StatusBadRequest}
+}
+
+// comment errors end
+
 func GetArticleById(c *gin.Context) {
 	idParam, ok := c.Params.Get("id")
 	id, err := strconv.Atoi(idParam)
 	if idParam == "" || !ok || err != nil {
 		log.Printf("No id was found for GetArticleById")
-		c.JSON(http.StatusBadRequest, IdNotFoundResponse())
+		c.JSON(http.StatusBadRequest, ArticleIdNotFoundResponse())
 		return
 	}
 	article, err := articles.GetArticleById(id)
@@ -83,6 +101,35 @@ func CreateArticle(c *gin.Context) {
 	if err != nil {
 		log.Print(err.Error())
 		c.JSON(http.StatusInternalServerError, ArticleCreationError())
+		return
+	}
+	c.Status(http.StatusCreated)
+}
+
+func CreateComment(c *gin.Context) {
+	idParam, ok := c.Params.Get("id")
+	articleId, err := strconv.Atoi(idParam)
+	if idParam == "" || !ok || err != nil {
+		log.Printf("No id was provided for CreateComment")
+		c.JSON(http.StatusBadRequest, ArticleIdNotFoundResponse())
+		return
+	}
+	comment := new(models.Comment)
+	err = c.BindJSON(comment)
+	if err != nil {
+		log.Print(err.Error())
+		c.JSON(http.StatusBadRequest, CommentBindingError())
+		return
+	}
+	comment.ArticleId = articleId
+	err = comments.CreateComment(comment)
+	if err != nil {
+		if err.Error() == comments.NoArticleIdProvidedErrorContent {
+			log.Print(err.Error())
+			c.JSON(http.StatusBadRequest, CommentInvalidArticleIdProvidedError())
+		}
+		log.Print(err.Error())
+		c.JSON(http.StatusInternalServerError, CommentCreationError())
 		return
 	}
 	c.Status(http.StatusCreated)

@@ -8,6 +8,7 @@ import (
 
 const currentApiVersionUri = "/v1"
 const articlesUri = currentApiVersionUri + "/articles"
+const commentsUri = articlesUri + "/:id/comments"
 
 func main() {
 	repository.InitDb()
@@ -15,5 +16,6 @@ func main() {
 	route.GET(articlesUri+"/:id", handlers.GetArticleById)
 	route.GET(articlesUri, handlers.GetArticles)
 	route.POST(articlesUri, handlers.CreateArticle)
+	route.POST(commentsUri, handlers.CreateComment)
 	route.Run()
 }

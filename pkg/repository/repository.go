@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -11,10 +12,13 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var db *sql.DB
+
+const ArticleIdFKErrorContent = "foreign key constraint error occured for article id in comment creation"
 
 func InitDb() {
 	driverName := os.Getenv("DATABASE_DRIVER") // e.g. postgres
@@ -79,5 +83,19 @@ func CreateArticle(article *models.Article) error {
 	}
 	_, err := db.Exec("INSERT INTO article(title, content, creation_timestamp) VALUES ($1, $2, $3)",
 		article.Title, article.Content, article.CreationTimestamp)
+	return err
+}
+
+func CreateComment(comment *models.Comment) error {
+	if comment.CreationTimestamp.IsZero() {
+		comment.CreationTimestamp = time.Now()
+	}
+	_, err := db.Exec("INSERT INTO comment(article_id, author, content, creation_timestamp) VALUES ($1, $2, $3, $4)",
+		comment.ArticleId, comment.Author, comment.Content, comment.CreationTimestamp)
+	if pgerr, ok := err.(*pgconn.PgError); ok {
+		if pgerr.Code == "23503" { // FOREIGN KEY VIOLATION code in postgres
+			return errors.New(ArticleIdFKErrorContent)
+		}
+	}
 	return err
 }
