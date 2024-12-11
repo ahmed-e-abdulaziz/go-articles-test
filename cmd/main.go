@@ -10,6 +10,5 @@ func main() {
 	repository.InitDb()
 	route := gin.Default()
 	route.GET("/v1/articles/:id", handlers.GetArticleById)
-	route.Run() // listen and serve on 0.0.0.0:8080
+	route.Run()
 }
-

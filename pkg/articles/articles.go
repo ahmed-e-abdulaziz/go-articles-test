@@ -10,7 +10,7 @@ import (
 
 const NoArticleFoundError = "no article was found"
 
-func GetArticleById(id int) (*models.Article, error) {
+var GetArticleById = func(id int) (*models.Article, error) {
 	article, err := repository.GetArticleById(id)
 	if err != nil && err == sql.ErrNoRows {
 		err = errors.New(NoArticleFoundError)
