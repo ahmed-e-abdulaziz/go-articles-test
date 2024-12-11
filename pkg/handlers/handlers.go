@@ -54,6 +54,9 @@ func CommentCreationError() ErrorResponse {
 func CommentInvalidArticleIdProvidedError() ErrorResponse {
 	return ErrorResponse{err: "Invalid article id provided for the comment", status: http.StatusBadRequest}
 }
+func CommentGetAllByArticleIdError(articleId string) ErrorResponse {
+	return ErrorResponse{err: "An error occured while fetching comments for the articleId: " + articleId, status: http.StatusBadRequest}
+}
 
 // comment errors end
 
@@ -133,4 +136,21 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusCreated)
+}
+
+func GetCommentsForArticle(c *gin.Context) {
+	idParam, ok := c.Params.Get("id")
+	articleId, err := strconv.Atoi(idParam)
+	if idParam == "" || !ok || err != nil {
+		log.Printf("No id was provided for CreateComment")
+		c.JSON(http.StatusBadRequest, ArticleIdNotFoundResponse())
+		return
+	}
+	comments, err := comments.GetCommentsByArticleId(articleId)
+	if err != nil {
+		log.Print(err.Error())
+		c.JSON(http.StatusInternalServerError, ArticleGetAllError())
+		return
+	}
+	c.JSON(http.StatusOK, comments)
 }

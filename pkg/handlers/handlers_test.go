@@ -136,6 +136,40 @@ func TestCreateComment(t *testing.T) {
 	assert.True(t, calledCreateComment, "Should call comments.CreateComment with a valid request")
 }
 
+func TestGetCommentsForArticleShouldReturn400ForWrongId(t *testing.T) {
+	defer initContext()
+	t.Run("No ID provided", func(t *testing.T) {
+		GetCommentsForArticle(context) // No ID param provided
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById without an ID it must return 400 error")
+	})
+	t.Run("Empty ID provided", func(t *testing.T) {
+		context.AddParam("id", "")
+		GetCommentsForArticle(context) // No ID param provided
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an empty ID it must return 400 error")
+	})
+	t.Run("Non-numeric ID provided", func(t *testing.T) {
+		context.AddParam("id", "ABC")
+		GetCommentsForArticle(context) // No ID param provided
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an non numeric ID it must return 400 error")
+	})
+}
+
+func TestGetCommentsForArticle(t *testing.T) {
+	// Given
+	defer initContext()
+	comments.GetCommentsByArticleId = successfulGetCommentsByArticleId()
+	context.AddParam("id", "1")
+
+	// When
+	GetCommentsForArticle(context)
+
+	// Then
+	expected, _ := json.Marshal([]models.Comment{*validComment(1), *validComment(2)})
+	assert.Equal(t, string(expected), string(recorder.Body.String()))
+	assert.Equal(t, http.StatusOK, recorder.Code)
+}
+
+
 func initContext() {
 	recorder = httptest.NewRecorder()
 	context, _ = gin.CreateTestContext(recorder)
@@ -152,6 +186,13 @@ func successfulGetArticleById() func(id int) (*models.Article, error) {
 		return validArticle(id), nil
 	}
 }
+
+func successfulGetCommentsByArticleId() func(articleId int) ([]models.Comment, error) {
+		return func(articleId int) ([]models.Comment, error) {
+			return []models.Comment{*validComment(1), *validComment(2)}, nil
+		}
+}
+
 
 func validArticle(id int) *models.Article {
 	return &models.Article{Id: id, Title: "Awesome", Content: "Awesome article is awesome", CreationTimestamp: time.UnixMilli(1733829984990)}

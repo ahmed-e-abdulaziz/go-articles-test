@@ -19,3 +19,7 @@ var CreateComment = func(comment *models.Comment) error {
 	}
 	return err
 }
+
+var GetCommentsByArticleId = func(articleId int) ([]models.Comment, error) {
+	return repository.GetCommentsByArticleId(articleId)
+}

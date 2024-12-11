@@ -17,5 +17,6 @@ func main() {
 	route.GET(articlesUri, handlers.GetArticles)
 	route.POST(articlesUri, handlers.CreateArticle)
 	route.POST(commentsUri, handlers.CreateComment)
+	route.GET(commentsUri, handlers.GetCommentsForArticle)
 	route.Run()
 }

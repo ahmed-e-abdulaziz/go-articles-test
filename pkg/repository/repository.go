@@ -99,3 +99,14 @@ func CreateComment(comment *models.Comment) error {
 	}
 	return err
 }
+
+func GetCommentsByArticleId(articleId int) ([]models.Comment, error) {
+	result := []models.Comment{}
+	rows, err := db.Query("SELECT id, article_id, author, content, creation_timestamp FROM comment")
+	for rows.Next() {
+		comment := new(models.Comment)
+		rows.Scan(&comment.Id, &comment.ArticleId, &comment.Author, &comment.Content, &comment.CreationTimestamp)
+		result = append(result, *comment)
+	}
+	return result, err
+}
