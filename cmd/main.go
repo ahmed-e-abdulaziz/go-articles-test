@@ -6,9 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const currentApiVersionUri = "/v1"
+const articlesUri = currentApiVersionUri + "/articles"
+
 func main() {
 	repository.InitDb()
 	route := gin.Default()
-	route.GET("/v1/articles/:id", handlers.GetArticleById)
+	route.GET(articlesUri+"/:id", handlers.GetArticleById)
+	route.GET(articlesUri, handlers.GetArticles)
+	route.POST(articlesUri, handlers.CreateArticle)
 	route.Run()
 }

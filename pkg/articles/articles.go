@@ -17,3 +17,11 @@ var GetArticleById = func(id int) (*models.Article, error) {
 	}
 	return article, err
 }
+
+var GetArticles = func() ([]models.Article, error) {
+	return repository.GetArticles()
+}
+
+var CreateArticle = func(article *models.Article) error {
+	return repository.CreateArticle(article)
+}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/models"
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/utils"
@@ -59,4 +60,24 @@ func GetArticleById(id int) (*models.Article, error) {
 	result := db.QueryRow("SELECT id, title, content, creation_timestamp FROM article WHERE ID = $1", id)
 	err := result.Scan(&article.Id, &article.Title, &article.Content, &article.CreationTimestamp)
 	return article, err
+}
+
+func GetArticles() ([]models.Article, error) {
+	result := []models.Article{}
+	rows, err := db.Query("SELECT id, title, content, creation_timestamp FROM article")
+	for rows.Next() {
+		article := new(models.Article)
+		rows.Scan(&article.Id, &article.Title, &article.Content, &article.CreationTimestamp)
+		result = append(result, *article)
+	}
+	return result, err
+}
+
+func CreateArticle(article *models.Article) error {
+	if article.CreationTimestamp.IsZero() {
+		article.CreationTimestamp = time.Now()
+	}
+	_, err := db.Exec("INSERT INTO article(title, content, creation_timestamp) VALUES ($1, $2, $3)",
+		article.Title, article.Content, article.CreationTimestamp)
+	return err
 }
