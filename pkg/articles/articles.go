@@ -8,20 +8,34 @@ import (
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/repository"
 )
 
+type articleService struct {
+	repo repository.ArticleRepository
+}
+
+type ArticleService interface {
+	GetArticleById(id int) (*models.Article, error)
+	GetArticles() ([]models.Article, error)
+	CreateArticle(article *models.Article) error
+}
+
+func NewArticleService(repo repository.ArticleRepository) ArticleService {
+	return &articleService{repo: repo}
+}
+
 const NoArticleFoundError = "no article was found"
 
-var GetArticleById = func(id int) (*models.Article, error) {
-	article, err := repository.GetArticleById(id)
+func (service *articleService) GetArticleById(id int) (*models.Article, error) {
+	article, err := service.repo.GetArticleById(id)
 	if err != nil && err == sql.ErrNoRows {
 		err = errors.New(NoArticleFoundError)
 	}
 	return article, err
 }
 
-var GetArticles = func() ([]models.Article, error) {
-	return repository.GetArticles()
+func (service *articleService) GetArticles() ([]models.Article, error) {
+	return service.repo.GetArticles()
 }
 
-var CreateArticle = func(article *models.Article) error {
-	return repository.CreateArticle(article)
+func (service *articleService) CreateArticle(article *models.Article) error {
+	return service.repo.CreateArticle(article)
 }

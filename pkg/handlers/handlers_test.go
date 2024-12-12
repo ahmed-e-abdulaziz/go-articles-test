@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/articles"
-	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/comments"
 	"github.com/ahmed-e-abdulaziz/go-articles-test/pkg/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +17,15 @@ import (
 
 var recorder *httptest.ResponseRecorder
 var context *gin.Context
+
+type mockArticleService struct {
+	CreateArticleCalled bool
+}
+type mockCommentService struct {
+	CalledCreateComment bool
+}
+
+var routeHandler = &RouteHandler{articleService: &mockArticleService{}, commentService: &mockCommentService{}}
 
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
@@ -29,17 +36,17 @@ func TestMain(m *testing.M) {
 func TestGetArticleByIdShouldReturn400(t *testing.T) {
 	defer initContext()
 	t.Run("No ID provided", func(t *testing.T) {
-		GetArticleById(context) // No ID param provided
+		routeHandler.GetArticleById(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById without an ID it must return 400 error")
 	})
 	t.Run("Empty ID provided", func(t *testing.T) {
 		context.AddParam("id", "")
-		GetArticleById(context) // No ID param provided
+		routeHandler.GetArticleById(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an empty ID it must return 400 error")
 	})
 	t.Run("Non-numeric ID provided", func(t *testing.T) {
 		context.AddParam("id", "ABC")
-		GetArticleById(context) // No ID param provided
+		routeHandler.GetArticleById(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an non numeric ID it must return 400 error")
 	})
 }
@@ -47,11 +54,10 @@ func TestGetArticleByIdShouldReturn400(t *testing.T) {
 func TestGetArticleById(t *testing.T) {
 	// Given
 	defer initContext()
-	articles.GetArticleById = successfulGetArticleById()
 	context.AddParam("id", "1")
 
 	// When
-	GetArticleById(context)
+	routeHandler.GetArticleById(context)
 
 	// Then
 	expected, _ := json.Marshal(validArticle(1))
@@ -62,10 +68,9 @@ func TestGetArticleById(t *testing.T) {
 func TestGetArticles(t *testing.T) {
 	// Given
 	defer initContext()
-	articles.GetArticles = successfulGetArticles()
 
 	// When
-	GetArticles(context)
+	routeHandler.GetArticles(context)
 
 	// Then
 	expected, _ := json.Marshal([]models.Article{*validArticle(1), *validArticle(2)})
@@ -76,11 +81,7 @@ func TestGetArticles(t *testing.T) {
 func TestCreateArticle(t *testing.T) {
 	// Given
 	defer initContext()
-	calledCreateArticle := false
-	articles.CreateArticle = func(article *models.Article) error {
-		calledCreateArticle = true
-		return nil
-	}
+	defer routeHandler.articleService.(*mockArticleService).Reset()
 
 	body, _ := json.Marshal(validArticle(1))
 	context.Request = &http.Request{
@@ -89,26 +90,26 @@ func TestCreateArticle(t *testing.T) {
 	}
 
 	// When
-	CreateArticle(context)
+	routeHandler.CreateArticle(context)
 
 	// Then
-	assert.True(t, calledCreateArticle, "Should call articles.CreateArticle with a valid request")
+	assert.True(t, routeHandler.articleService.(*mockArticleService).CreateArticleCalled, "Should call articleService.CreateArticle with a valid request")
 }
 
 func TestCreateCommentShouldReturn400ForWrongId(t *testing.T) {
 	defer initContext()
 	t.Run("No ID provided", func(t *testing.T) {
-		CreateComment(context) // No ID param provided
+		routeHandler.CreateComment(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById without an ID it must return 400 error")
 	})
 	t.Run("Empty ID provided", func(t *testing.T) {
 		context.AddParam("id", "")
-		CreateComment(context) // No ID param provided
+		routeHandler.CreateComment(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an empty ID it must return 400 error")
 	})
 	t.Run("Non-numeric ID provided", func(t *testing.T) {
 		context.AddParam("id", "ABC")
-		CreateComment(context) // No ID param provided
+		routeHandler.CreateComment(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an non numeric ID it must return 400 error")
 	})
 }
@@ -116,11 +117,7 @@ func TestCreateCommentShouldReturn400ForWrongId(t *testing.T) {
 func TestCreateComment(t *testing.T) {
 	// Given
 	defer initContext()
-	calledCreateComment := false
-	comments.CreateComment = func(article *models.Comment) error {
-		calledCreateComment = true
-		return nil
-	}
+	defer routeHandler.commentService.(*mockCommentService).Reset()
 
 	body, _ := json.Marshal(validComment(1))
 	context.Request = &http.Request{
@@ -130,26 +127,26 @@ func TestCreateComment(t *testing.T) {
 	context.AddParam("id", "1")
 
 	// When
-	CreateComment(context)
+	routeHandler.CreateComment(context)
 
 	// Then
-	assert.True(t, calledCreateComment, "Should call comments.CreateComment with a valid request")
+	assert.True(t, routeHandler.commentService.(*mockCommentService).CalledCreateComment, "Should call comments.CreateComment with a valid request")
 }
 
 func TestGetCommentsForArticleShouldReturn400ForWrongId(t *testing.T) {
 	defer initContext()
 	t.Run("No ID provided", func(t *testing.T) {
-		GetCommentsForArticle(context) // No ID param provided
+		routeHandler.GetCommentsForArticle(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById without an ID it must return 400 error")
 	})
 	t.Run("Empty ID provided", func(t *testing.T) {
 		context.AddParam("id", "")
-		GetCommentsForArticle(context) // No ID param provided
+		routeHandler.GetCommentsForArticle(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an empty ID it must return 400 error")
 	})
 	t.Run("Non-numeric ID provided", func(t *testing.T) {
 		context.AddParam("id", "ABC")
-		GetCommentsForArticle(context) // No ID param provided
+		routeHandler.GetCommentsForArticle(context) // No ID param provided
 		assert.Equal(t, http.StatusBadRequest, recorder.Code, "When calling GetArticleById with an non numeric ID it must return 400 error")
 	})
 }
@@ -157,11 +154,10 @@ func TestGetCommentsForArticleShouldReturn400ForWrongId(t *testing.T) {
 func TestGetCommentsForArticle(t *testing.T) {
 	// Given
 	defer initContext()
-	comments.GetCommentsByArticleId = successfulGetCommentsByArticleId()
 	context.AddParam("id", "1")
 
 	// When
-	GetCommentsForArticle(context)
+	routeHandler.GetCommentsForArticle(context)
 
 	// Then
 	expected, _ := json.Marshal([]models.Comment{*validComment(1), *validComment(2)})
@@ -169,30 +165,40 @@ func TestGetCommentsForArticle(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
-
 func initContext() {
 	recorder = httptest.NewRecorder()
 	context, _ = gin.CreateTestContext(recorder)
 }
 
-func successfulGetArticles() func() ([]models.Article, error) {
-	return func() ([]models.Article, error) {
-		return []models.Article{*validArticle(1), *validArticle(2)}, nil
-	}
+func (m *mockArticleService) GetArticleById(id int) (*models.Article, error) {
+	return validArticle(id), nil
 }
 
-func successfulGetArticleById() func(id int) (*models.Article, error) {
-	return func(id int) (*models.Article, error) {
-		return validArticle(id), nil
-	}
+func (m *mockArticleService) GetArticles() ([]models.Article, error) {
+	return []models.Article{*validArticle(1), *validArticle(2)}, nil
 }
 
-func successfulGetCommentsByArticleId() func(articleId int) ([]models.Comment, error) {
-		return func(articleId int) ([]models.Comment, error) {
-			return []models.Comment{*validComment(1), *validComment(2)}, nil
-		}
+func (m *mockArticleService) CreateArticle(article *models.Article) error {
+	m.CreateArticleCalled = true
+	return nil
 }
 
+func (m *mockArticleService) Reset() {
+	m.CreateArticleCalled = false
+}
+
+func (m *mockCommentService) GetCommentsByArticleId(articleId int) ([]models.Comment, error) {
+	return []models.Comment{*validComment(1), *validComment(2)}, nil
+}
+
+func (m *mockCommentService) CreateComment(article *models.Comment) error {
+	m.CalledCreateComment = true
+	return nil
+}
+
+func (m *mockCommentService) Reset() {
+	m.CalledCreateComment = false
+}
 
 func validArticle(id int) *models.Article {
 	return &models.Article{Id: id, Title: "Awesome", Content: "Awesome article is awesome", CreationTimestamp: time.UnixMilli(1733829984990)}
